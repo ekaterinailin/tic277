@@ -1,3 +1,16 @@
+"""
+Python 3.8 - UTF-8
+
+X-ray Loops
+Ekaterina Ilin, 2022
+MIT License
+
+---
+
+This script reads in X-ray data from the XMM-Newton mission, 
+and makes a stacked light curve combining all detectors.
+"""
+
 import numpy as np
 import pandas as pd
 
@@ -115,7 +128,7 @@ if __name__ == "__main__":
     # NOW MAKE LIGHTCURVE AND WRITE TO FILE
 
     # number of bins
-    nbins = 200
+    nbins = 300
 
     # init the time series in the length of the bins
     hist = np.zeros(nbins)
@@ -151,25 +164,43 @@ if __name__ == "__main__":
     events_stack = np.vstack(eventss).sum(axis=0)
     events_over_bkg_stack = np.vstack(events_over_bkgs).sum(axis=0)
 
+
     # caclulate the centers of the bins
     binmids = (bins[1:] + bins[:-1]) / 2
 
     # calculate the observing time per bin
     dt = bins[1] - bins[0]
 
+    # flux per area per second
+    events_over_bkg_per_area_per_second = events_over_bkg_stack / dt
+
+    # normalized flux per area per second
+    normalized_flux = (events_over_bkg_per_area_per_second / 
+                       np.nanmedian(events_over_bkg_per_area_per_second) -
+                       1.)
+
+
     # rotation period of TIC 277 in seconds
     rotper = 4.56 * 60 * 60 # seconds
 
     # calculate the rotational phase
-    phase = (binmids - binmids[0]) / rotper % 1
+    phase_unfold = (binmids - binmids[0]) / rotper 
+    phase_fold = phase_unfold % 1
 
     # convert histogram of events and phase to pandas DataFrame
-    dd = pd.DataFrame({
-                        "flux_over_background_per_time_bin": events_over_bkg_stack,
-                        "flux_over_background_per_s": events_over_bkg_stack / dt,
-                        "bg_flux": bgs_stack, 
-                        "counts_per_a_per_s": events_stack,
-                        "rot_phase": phase,
-                        "time": binmids})
+    dd = pd.DataFrame({"flux_over_background_per_time_bin": events_over_bkg_stack,
+                       "flux_over_background_per_s": events_over_bkg_per_area_per_second,
+                       "normalized_flux": normalized_flux,
+                       "bg_flux": bgs_stack, 
+                       "counts_per_a_per_s": events_stack,
+                       "rot_phase": phase_fold,
+                       "rot_phase_unfold" : phase_unfold,
+                       "time": binmids})
+
+    # write to file
+    print("Number of bins: ", nbins, "\n")
+    print("Writing to file:\n")
+    print(dd.head())
+
 
     dd.to_csv("../results/stacked_xray_lightcurve.csv", index=False)
