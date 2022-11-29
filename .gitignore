@@ -1,0 +1,10 @@
+*.fits
+*.FIT
+*.pdf
+
+*checkpoint.ipynb
+*__pycache__*
+
+.~lock.*
+plots/
+
