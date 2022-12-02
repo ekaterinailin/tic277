@@ -20,9 +20,11 @@ from scipy import optimize
 from altaipony.altai import aflare
 
 def sin2_and_flare(x, a, b, c, d, e, f, g):
+    """Sinusoidal function with variable period."""
     return a * np.sin(d * x + b) + c + aflare(x, e, f, g)
 
 def sin_and_flare(x, a, b, c, d, e, f):
+    """Sinusoidal function with fixed period."""
     return a * np.sin(2. * np.pi * x + b) + c + aflare(x, d, e, f)
 
 
@@ -93,6 +95,38 @@ if __name__ == "__main__":
     print("Saving figure to ", path)
     plt.savefig(path, dpi=300)
 
+     # RESIDUALS
+
+    # plot the residuals
+    plt.figure(figsize=(8,6))
+
+    # now we need a DataFrame again because we phase fold
+    # subtract the flare fit from the data
+    dd["flare"] =  sin_and_flare(dd["rot_phase_unfold"].values, *params)
+    dd["residuals"] = dd["normalized_flux"] - dd["flare"]
+
+    # sort data by phase then and plot
+    # dd = dd.sort_values("rot_phase")
+    plt.scatter(dd["rot_phase"], dd["residuals"] , c="grey")
+
+
+    # add a horizontal line at zero
+    plt.plot([0, 1],[0,0], c="blue")
+
+    # labels and limits and stuff
+    plt.ylim(-4, 4)
+    plt.xlim(0, 1)
+    plt.ylabel("RESIDUAL normalized background subtracted flux")
+    plt.xlabel("rotational phase")
+
+    # save the figure
+    plt.tight_layout()
+    path = "../results/plots/flare_and_sin_fit_residuals_folded.png"
+    print("Saving figure to ", path)
+    plt.savefig(path, dpi=300)
+
+
+
     # -------------------------------------------------------------------------
 
 
@@ -154,5 +188,38 @@ if __name__ == "__main__":
     path = "../results/plots/flare_only_fit_residuals.png"
     print("Saving figure to ", path)
     plt.savefig(path, dpi=300)
+
+
+    # PHASE FOLDED RESIDUALS
+
+    # plot the residuals
+    plt.figure(figsize=(8,6))
+
+    # now we need a DataFrame again because we phase fold
+    # subtract the flare fit from the data
+    dd["flare"] =  aflare(dd["rot_phase_unfold"].values, *params)
+    dd["residuals"] = dd["normalized_flux"] - dd["flare"]
+
+    # sort data by phase then and plot
+    # dd = dd.sort_values("rot_phase")
+    dd = dd.sort_values("rot_phase", ascending=True)
+    plt.scatter(dd["rot_phase"], dd["residuals"] , c="grey")
+
+
+    # add a horizontal line at zero
+    plt.plot([0, 1],[0,0], c="blue")
+
+    # labels and limits and stuff
+    plt.ylim(-4,4)
+    plt.xlim(0, 1)
+    plt.ylabel("RESIDUAL normalized background subtracted flux")
+    plt.xlabel("rotational phase")
+
+    # save the figure
+    plt.tight_layout()
+    path = "../results/plots/flare_only_fit_residuals_folded.png"
+    print("Saving figure to ", path)
+    plt.savefig(path, dpi=300)
+
 
     # -------------------------------------------------------------------------
