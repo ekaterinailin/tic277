@@ -52,7 +52,7 @@ if __name__ == "__main__":
         timeseries = timeseries.append(df, ignore_index=True)
 
     # write to file
-    timeseries.to_csv("../data/xmm/om/timeseries.csv", index=False)
+    timeseries.to_csv("../results/timeseries.csv", index=False)
 
 
     # plot the light curve

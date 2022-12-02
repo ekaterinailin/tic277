@@ -25,7 +25,7 @@ def sin2_and_flare(x, a, b, c, d, e, f, g):
 
 def sin_and_flare(x, a, b, c, d, e, f):
     """Sinusoidal function with fixed period."""
-    return a * np.sin(2. * np.pi * x + b) + c + aflare(x, d, e, f)
+    return a * np.sin(4. * np.pi * x + b) + c + aflare(x, d, e, f)
 
 
 if __name__ == "__main__":

@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # NOW MAKE LIGHTCURVE AND WRITE TO FILE
 
     # number of bins
-    nbins = 300
+    nbins = 200
 
     # init the time series in the length of the bins
     hist = np.zeros(nbins)
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
 
     # rotation period of TIC 277 in seconds
-    rotper = 4.56 * 60 * 60 # seconds
+    rotper = 273.618 * 60 # seconds
 
     # calculate the rotational phase
     phase_unfold = (binmids - binmids[0]) / rotper 
