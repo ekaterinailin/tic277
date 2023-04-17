@@ -61,4 +61,5 @@ if __name__ == "__main__":
     plt.xlabel("time [s]")
     plt.ylabel("normalized flux")
     plt.xlim(timeseries.time.values[0], timeseries.time.values[-1])
+    print(timeseries.time.diff())
     plt.savefig("../results/plots/om.png")

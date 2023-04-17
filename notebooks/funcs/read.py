@@ -49,7 +49,7 @@ def get_cutout(df, x, y, radius):
 
 
 
-def get_dataframe(path):
+def get_dataframe(path, lc=False, spec=False):
     """Take path to fits file, and make it a DataFrame.
     
     Parameters:
@@ -62,6 +62,17 @@ def get_dataframe(path):
     df : pandas.DataFrame
         DataFrame with the data from the fits file,
         namely X, Y, PATTERN, PI, and TIME.
+    lc : bool
+        If True, return the lightcurve.
+    spec : bool
+        If True, return the spectrum.
+
+    Returns:
+    --------
+    df : pandas.DataFrame
+        DataFrame with the data from the fits file,
+        namely the lightcurve with X, Y, PATTERN, PI, and TIME, or the
+        spectrum with
     """
     # open fits file
     hdr = fits.open(path)
@@ -69,14 +80,23 @@ def get_dataframe(path):
     # get data
     data = hdr[1].data
 
-    # make DataFrame from columns, swapping byteorder
-    time = data["TIME"].byteswap().newbyteorder()
-    x = data["X"].byteswap().newbyteorder()
-    y = data["Y"].byteswap().newbyteorder()
-    pattern = data["PATTERN"].byteswap().newbyteorder()
-    pi = data["PI"].byteswap().newbyteorder()
-    df = pd.DataFrame({"time": time, "x": x, "y": y, "pattern": pattern, "pi": pi})
+    if lc:
+        # make DataFrame from columns, swapping byteorder
+        time = data["TIME"].byteswap().newbyteorder()
+        x = data["X"].byteswap().newbyteorder()
+        y = data["Y"].byteswap().newbyteorder()
+        pattern = data["PATTERN"].byteswap().newbyteorder()
+        pi = data["PI"].byteswap().newbyteorder()
 
+        df = pd.DataFrame({"time": time, "x": x, "y": y, "pattern": pattern, "pi": pi})
+
+    elif spec:
+        # make Data Frame from columns, swapping byteorder
+        energy = data["CHANNEL"].byteswap().newbyteorder()
+        counts = data["COUNTS"].byteswap().newbyteorder()
+
+        df = pd.DataFrame({"energy": energy, "counts": counts})
+    
     return df
 
 
@@ -129,3 +149,38 @@ def get_events_and_bg(path):
     events_bg = get_cutout(df, xbg, ybg, rbg)
 
     return events, events_bg, (x, y, r), (xbg, ybg, rbg)
+
+
+
+def get_area_ratio_source_to_background(detector):
+    """Get the area ratio of the source to the background.
+    
+    Parameters:
+    -----------
+    detector : str
+        Name of the detector.
+
+    Returns:
+    --------
+    area_ratio : float
+        Area ratio of the source to the background.
+    """
+    # define the path to the reg files
+    path = f"../data/xmm/2022-10-05-095929/{detector}"
+
+    # read in the reg files and the radii of each
+    with open(path + "_phys.reg", "r") as f:
+        for i, line in enumerate(f):
+            if line[:6] == "circle":
+                r = float(line[7:-2].split(",")[-1])
+    
+    with open(path + "_bkg_phys.reg", "r") as f:
+        for i, line in enumerate(f):
+            if line[:6] == "circle":
+                rbg = float(line[7:-2].split(",")[-1])
+
+    # calculate the area ratio
+    area_ratio = r**2 / rbg**2
+
+    return area_ratio
+    
