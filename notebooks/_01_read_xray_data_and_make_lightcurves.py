@@ -95,7 +95,7 @@ if __name__ == "__main__":
     paths = [f"../data/xmm/2022-10-05-095929/{x}.fits" for x in detectors]
 
     # get the events and background
-    data = [(detector, get_events_and_bg(path)) for detector, path in list(zip(detectors,paths))]
+    data = [(detector, get_events_and_bg(path, lc=True)) for detector, path in list(zip(detectors,paths))]
 
 
     # FIRST SOME LOW LEVEL PLOTS SHOWING THE DETECTOR DATA
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         detector = d[0]
         events.groupby(["x","y"]).time.count().reset_index()
         fig, ax = plt.subplots(figsize=(8,6))
-        events.plot.scatter(x="x",y="y",c="pattern",cmap="viridis",s=40, ax=ax)
+        ax.scatter(events["x"],events["y"],cmap="viridis",s=40)
         ax.set_title(f"{detector} events")
         plt.tight_layout()
         plt.savefig(f"../results/plots/{detector}_events.png")
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         detector = d[0]
         events.groupby(["x","y"]).time.count().reset_index()
         fig, ax = plt.subplots(figsize=(8,6))
-        events.plot.scatter(x="x",y="y",c="pattern",cmap="viridis",s=40, ax=ax)
+        ax.scatter(events["x"],events["y"],cmap="viridis",s=40)
         ax.set_title(f"{detector} background")
         plt.tight_layout()
         plt.savefig(f"../results/plots/{detector}_background.png")
@@ -202,5 +202,10 @@ if __name__ == "__main__":
     print("Writing to file:\n")
     print(dd.head())
 
+    # write to file
+    filename = "stacked_xray_lightcurve.csv"
+    dd.to_csv(f"../results/{filename}", index=False)
 
-    dd.to_csv("../results/stacked_xray_lightcurve.csv", index=False)
+    # write to paper repository
+    path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
+    dd.to_csv(f"{path_to_paper}/data/{filename}", index=False)

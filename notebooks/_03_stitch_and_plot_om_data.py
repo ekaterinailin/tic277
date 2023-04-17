@@ -49,10 +49,15 @@ if __name__ == "__main__":
         # print(flares)
 
         
-        timeseries = timeseries.append(df, ignore_index=True)
+        timeseries = pd.concat([timeseries, df], ignore_index=True)
 
     # write to file
-    timeseries.to_csv("../results/timeseries.csv", index=False)
+    filename = "timeseries.csv"
+    timeseries.to_csv(f"../results/{filename}", index=False)
+
+    # write to paper repository
+    path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
+    timeseries.to_csv(f"{path_to_paper}/data/{filename}", index=False)
 
 
     # plot the light curve

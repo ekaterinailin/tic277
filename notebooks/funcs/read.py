@@ -101,7 +101,7 @@ def get_dataframe(path, lc=False, spec=False):
 
 
 
-def get_events_and_bg(path):
+def get_events_and_bg(path, lc=True, spec=False):
     """Wrapper function to get the events and background
     using the get_dataframe and get_cutout functions. Uses
     cutout definitions in files in the data directory.
@@ -130,7 +130,7 @@ def get_events_and_bg(path):
         background cutout.
     """
     # get data
-    df = get_dataframe(path)
+    df = get_dataframe(path, lc=lc, spec=spec)
 
     # get background cutout coordinates
     with open(path.split(".fits")[0] + "_bkg_phys.reg", "r") as f:
