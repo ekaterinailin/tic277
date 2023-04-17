@@ -14,6 +14,43 @@ create a pandas DataFrame with the data, and cut out required fields.
 import pandas as pd
 
 from astropy.io import fits
+from astropy.table import Table
+
+
+
+def read_xspec_results(filename):
+    """Read the results of XSPEC fits.
+    
+    Parameters
+    ----------
+    filename : str
+        Name of the file to read
+
+    Returns
+    -------
+    tabdf : pandas DataFrame
+    """
+
+    # read the file
+    tab = Table.read(f"../data/{filename}")
+
+    # for entries longer than one date, split in individual rows
+    longnames = [name for name in tab.colnames if len(tab[name].shape) > 1]
+
+    # split the entries into lower and upper 90% confidence intervals
+    for l in longnames:
+        for i, label in zip([0,1],["_low","_high"]):
+            tab[l + label] = [t[i] for t in tab[l]]
+
+    # now drop all the long entries
+    names = [name for name in tab.colnames if len(tab[name].shape) <= 1]
+
+    # drop the entries that are no longer needed, and select only converted ones
+    tabdf = tab[names]
+
+    # convert to pandas DataFrame
+    return tabdf.to_pandas().T
+
 
 
 def get_cutout(df, x, y, radius):
