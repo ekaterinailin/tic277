@@ -18,7 +18,9 @@ from astropy.table import Table
 
 
 
-def read_xspec_results(filename):
+
+
+def read_xspec_results(filename, flux=True):
     """Read the results of XSPEC fits.
     
     Parameters
@@ -39,8 +41,13 @@ def read_xspec_results(filename):
 
     # split the entries into lower and upper 90% confidence intervals
     for l in longnames:
-        for i, label in zip([0,1],["_low","_high"]):
-            tab[l + label] = [t[i] for t in tab[l]]
+        length = tab[l].shape[1]
+        if length == 2:
+            for i, label in zip([0,1],["_low","_high"]):
+                tab[l + label] = [t[i] for t in tab[l]]
+        elif length == 3:
+            for i, label in zip([0,1,2],["_d1","_d2","_d3"]):
+                tab[l + label] = [t[i] for t in tab[l]]
 
     # now drop all the long entries
     names = [name for name in tab.colnames if len(tab[name].shape) <= 1]
@@ -49,7 +56,15 @@ def read_xspec_results(filename):
     tabdf = tab[names]
 
     # convert to pandas DataFrame
-    return tabdf.to_pandas().T
+    tdf = tabdf.to_pandas()
+
+    if flux:
+        tdf["flux_erg_s_cm2"] = tabdf["PHFLUX"].byteswap().newbyteorder()
+        tdf["flux_erg_s_cm2_low"] = tabdf["PHFLUXERL"].byteswap().newbyteorder()
+        tdf["flux_erg_s_cm2_high"] = tabdf["PHFLUXERH"].byteswap().newbyteorder()
+
+    return tdf
+
 
 
 
