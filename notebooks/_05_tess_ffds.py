@@ -94,7 +94,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------------------
     # SAVE RESULTS
 
-    # paper repo
+    # # paper repo
     path_to_paper = ("/home/ekaterina/Documents/002_writing/"
                     "2023_XMM_for_TIC277/xmm_for_tic277/src/data/")
 
@@ -110,13 +110,13 @@ if __name__ == "__main__":
                 f.write(data)
 
     # save detrended light curves
-    for lcd in lcds:
+    for lcd, lc in zip(lcds, lcs):
         # save to file, both in results and in paper repo
         for path in ["../results/", path_to_paper]:
             lcd.to_fits(path=f"{path}tic277_tess_detrended_{lcd.sector}.fits",
-                        **{"FLUX":lcd.flux.value,
+                        **{"FLUX":lc.flux.value,
                             "DETRENDED_FLUX_ERR":np.array(lcd.detrended_flux_err),
-                            "DETRENDED_FLUX":lcd.detrended_flux},
+                            "DETRENDED_FLUX":np.array(lcd.detrended_flux)},
                         overwrite=True)
 
     # save flare table
