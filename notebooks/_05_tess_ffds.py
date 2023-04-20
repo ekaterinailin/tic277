@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     # detrend light curves
     lcds = [lc.detrend("custom", func=custom_detrending, **{"savgol1":3.,"savgol2":1.5}) for lc in lcs]
-
+    print("Detrended light curves.")
 
     # find flares
     flares = pd.DataFrame()
@@ -73,6 +73,8 @@ if __name__ == "__main__":
     # add the combined flare
     nflares = pd.concat([nflares, sum], ignore_index=True)
 
+    print("Found flares.")
+
     # ----------------------------------------------------------------------------
     # CALCULATE FFD and FIT POWER LAW
 
@@ -86,6 +88,8 @@ if __name__ == "__main__":
 
     # fit the power law with MCMC
     ffd.fit_powerlaw("mcmc")
+
+    print("Calculated FFD and fit power law.")
 
     # ----------------------------------------------------------------------------
     # SAVE RESULTS
@@ -118,3 +122,5 @@ if __name__ == "__main__":
     # save flare table
     for path in ["../results/", path_to_paper]:
         nflares.to_csv(f"{path}tess_flares.csv", index=False)
+
+    print("Saved results.")
