@@ -46,7 +46,7 @@ def read_xspec_results(filename, flux=True):
             for i, label in zip([0,1],["_low","_high"]):
                 tab[l + label] = [t[i] for t in tab[l]]
         elif length == 3:
-            for i, label in zip([0,1,2],["_d1","_d2","_d3"]):
+            for i, label in zip([0,1,2],["_mos1","_mos2","_pn"]):
                 tab[l + label] = [t[i] for t in tab[l]]
 
     # now drop all the long entries
