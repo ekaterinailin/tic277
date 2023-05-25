@@ -78,11 +78,15 @@ def get_lightcurve(data, nbins, t0, t1):
     # get the flux density
     bkg_per_area = bkg_hist / bkg_a
 
+    # estimate noise level from std of background
+    std = np.std(bkg_per_area)
+    print(std)
+
     # ignore division by zero, accept nan values
     with np.errstate(divide='ignore', invalid='ignore'):
         events_over_bkg = events_per_area / bkg_per_area
 
-    return bins, events_per_area, bkg_per_area, events_over_bkg
+    return bins, events_per_area, bkg_per_area, events_over_bkg, std
 
 
 
@@ -138,6 +142,9 @@ if __name__ == "__main__":
     eventss = []
     bgs = []
     events_over_bkgs = []
+    events_minus_bkgs = []
+    stds = []
+   
 
     # define t0 as the earliest observing time in the data
     t0 = 776069941.4247829
@@ -148,7 +155,7 @@ if __name__ == "__main__":
     for detector, d in data:
 
         # get the lightcurve
-        bins, events, bkg, events_over_bkg = get_lightcurve(d, nbins, t0, t1)
+        bins, events, bkg, events_over_bkg, std = get_lightcurve(d, nbins, t0, t1)
 
         # add the flux to the detector collection
         bgs.append(bkg)
@@ -159,11 +166,22 @@ if __name__ == "__main__":
         # add the flux to the detector collection
         events_over_bkgs.append(events_over_bkg)
 
+        # add the std   to the detector collection
+        stds.append(std)
+
+        # add events minus bkg to the collection
+        events_minus_bkgs.append(events - bkg)
+
     # stack the lightcurves
     bgs_stack = np.vstack(bgs).sum(axis=0)
     events_stack = np.vstack(eventss).sum(axis=0)
     events_over_bkg_stack = np.vstack(events_over_bkgs).sum(axis=0)
+    events_minus_bkg_stack = np.vstack(events_minus_bkgs).sum(axis=0)
 
+    # add errors in quadrature
+    stds_stack = np.sum(np.asarray([s**2 for s in stds]))**0.5
+
+    print(stds_stack)
 
     # caclulate the centers of the bins
     binmids = (bins[1:] + bins[:-1]) / 2
@@ -178,7 +196,9 @@ if __name__ == "__main__":
     normalized_flux = (events_over_bkg_per_area_per_second / 
                        np.nanmedian(events_over_bkg_per_area_per_second) -
                        1.)
-
+    
+    # events minus background
+    events_minus_bkg = events_stack - bgs_stack
 
     # rotation period of TIC 277 in seconds
     rotper = 273.618 * 60 # seconds
@@ -195,7 +215,9 @@ if __name__ == "__main__":
                        "counts_per_a_per_s": events_stack,
                        "rot_phase": phase_fold,
                        "rot_phase_unfold" : phase_unfold,
-                       "time": binmids})
+                       "time": binmids,
+                       "events_minus_bkg": events_minus_bkg,
+                       "std": stds_stack,})
 
     # write to file
     print("Number of bins: ", nbins, "\n")
