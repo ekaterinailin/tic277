@@ -54,21 +54,22 @@ if __name__ == "__main__":
     flares.reset_index(inplace=True)
 
     # add manually the large flare by adding the contributions from the 4 detections
-    sum = flares.loc[flares.index < 4,["ed_rec","ed_rec_err"]].sum()
+    cond = (flares.index < 5) & (flares.index > 0)
+    sum = flares.loc[cond,["ed_rec","ed_rec_err"]].sum()
     sum = pd.DataFrame(sum).T
-    sum["tstart"] = flares.loc[flares.index < 4,"tstart"].min()
-    sum["tstop"] = flares.loc[flares.index < 4,"tstop"].max()
+    sum["tstart"] = flares.loc[cond,"tstart"].min()
+    sum["tstop"] = flares.loc[cond,"tstop"].max()
     sum["dur"] = sum["tstop"] - sum["tstart"]
-    sum["cstart"] = flares.loc[flares.index < 4,"cstart"].min()
-    sum["cstop"] = flares.loc[flares.index < 4,"cstop"].max()
-    sum["istart"]   = flares.loc[flares.index < 4,"istart"].min()
-    sum["istop"]    = flares.loc[flares.index < 4,"istop"].max()
-    sum["ampl_rec"] = flares.loc[flares.index < 4,"ampl_rec"].max()
-    sum["total_n_valid_data_points"] = flares.loc[flares.index < 4,"total_n_valid_data_points"].iloc[0]
+    sum["cstart"] = flares.loc[cond,"cstart"].min()
+    sum["cstop"] = flares.loc[cond,"cstop"].max()
+    sum["istart"]   = flares.loc[cond,"istart"].min()
+    sum["istop"]    = flares.loc[cond,"istop"].max()
+    sum["ampl_rec"] = flares.loc[cond,"ampl_rec"].max()
+    sum["total_n_valid_data_points"] = flares.loc[cond,"total_n_valid_data_points"].iloc[0]
     sum["Sector"] = 12
 
     # remove the 4 individual detections
-    nflares = flares.loc[flares.index > 4,:]
+    nflares = flares.loc[~cond,:]
 
     # add the combined flare
     nflares = pd.concat([nflares, sum], ignore_index=True)
