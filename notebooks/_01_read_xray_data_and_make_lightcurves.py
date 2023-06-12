@@ -79,8 +79,9 @@ def get_lightcurve(data, nbins, t0, t1):
     bkg_per_area = bkg_hist / bkg_a
 
     # estimate noise level from std of background
-    std = np.std(bkg_per_area)
-    print(std)
+    std_events = np.array([max(1, v) for v in np.sqrt(events_hist)])/ events_a
+    std_bkg = np.array([max(1, v) for v in np.sqrt(bkg_hist)]) / bkg_a
+    std = np.sqrt(std_events**2 + std_bkg**2)
 
     # ignore division by zero, accept nan values
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -179,9 +180,9 @@ if __name__ == "__main__":
     events_minus_bkg_stack = np.vstack(events_minus_bkgs).sum(axis=0)
 
     # add errors in quadrature
-    stds_stack = np.sum(np.asarray([s**2 for s in stds]))**0.5
+    stds_stack = np.sum(np.asarray([s**2 for s in stds]), axis=0)**0.5
 
-    print(stds_stack)
+    # print(stds_stack)
 
     # caclulate the centers of the bins
     binmids = (bins[1:] + bins[:-1]) / 2

@@ -142,6 +142,8 @@ def get_dataframe(path, lc=False, spec=False):
 
         df = pd.DataFrame({"time": time, "x": x, "y": y, "pattern": pattern, "pi": pi})
 
+        print(df["pattern"].unique())
+
     elif spec:
         # make Data Frame from columns, swapping byteorder
         energy = data["CHANNEL"].byteswap().newbyteorder()

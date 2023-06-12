@@ -48,20 +48,20 @@ def log_probability_aflare(theta, x, y, yerr):
     return lp + log_likelihood_aflare(theta, x, y, yerr)
 
 
+def log_likelihood_aflare(theta, x, y, yerr):
+    """Log likelihood function."""
+    d, e, f, a = theta
+    model = flare_only(x, d, e, f, a)
+    sigma2 = yerr**2
+    return -0.5 * np.sum((y - model) ** 2 / sigma2 + np.log(sigma2))
+
+
 if __name__ == "__main__":
 
     # read in the lightcurve
     dd = pd.read_csv("../results/stacked_xray_lightcurve.csv")
 
     model_func = flare_only
-    n = 3
-    
-    def log_likelihood_aflare(theta, x, y, yerr):
-        """Log likelihood function."""
-        d, e, f, a = theta
-        model = model_func(x, d, e, f, a)
-        sigma2 = yerr**2
-        return -0.5 * np.sum((y - model) ** 2 / sigma2 + np.log(sigma2))
 
     # define shortcuts to the relevant columns    
     x = dd.time.values / 60 / 60 / 24 - 8982.
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     # print the relevant results
 
-    print(f"Results {n}:")
+    print(f"Results:")
     print(results)
 
     # -------------------------------------------------------------------------

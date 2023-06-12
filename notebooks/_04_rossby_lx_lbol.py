@@ -106,89 +106,113 @@ def Vmag_from_G(G, BP_RP, eG):
 
 if __name__ == "__main__":
 
-    # input values 
-    d = 13.7 #pc
-    ed = 0.11 #pc
-    G =  14.7189 #Gaia DR3
-    eG = 0.0011 #Gaia DR3
-    BP_RP = 4.6190 # Gaia DR3  
-    eBP_RP =  0.0131 # Gaia DR3
-    Ks = 9.666  #2MASS
-    eKs = 0.024 #2MASS
+
+    # take the updated table from the 2021 paper
+    df = pd.read_csv('../data/ilin2021updated.csv')
 
     # V mag from gaia
-    V, eV = Vmag_from_G(G, BP_RP, eG)
+    df["V"], df['eV'] = Vmag_from_G(df.G, df.BP_RP, df.eG)
+
+    df["V_J"] = df.V - df.J
+    df["eV_J"] = np.sqrt(df.eV**2 + df.eJ**2)
 
     # convective turnover time from Wright et al. 2018
-    MKs = Ks - 5 * np.log10(d) + 5
-    eMKs = np.sqrt(eKs**2 + (5 * ed / (d * np.log(10)))**2)
+    MKs = df.Ks - 5 * np.log10(df.dist_bailerjones_pc_50) + 5
+    eMKs = np.sqrt(df.eKs**2 + (5 * df.dist_bailerjones_meanerr / 
+                                (df.dist_bailerjones_pc_50 * np.log(10)))**2)
+    
+    df["MJ"] = df.J - 5 * np.log10(df.dist_bailerjones_pc_50) + 5
+    df["eMJ"] = np.sqrt(df.eJ**2 + (5 * df.dist_bailerjones_meanerr /
+                                (df.dist_bailerjones_pc_50 * np.log(10)))**2)
 
     # stellar mass and error
     M, eM = mass_from_Ks_mann2016(MKs, eMKs)
+    df["M"] = M
+    df["eM"] = eM
 
     # convective turnover time and error
     tau, tau_high, tau_low = tau_wright2018_mass(M, err=True, eM=eM)
 
     # rotation period
-    Prot = 273.618 / 60 /24 
-    eProt = 0.007 / 60 / 24
+    Prot = df['Prot_min'] / 60 /24 
+    eProt = df['eProt_min'] / 60 / 24
 
     # Rossby number
-    Rossby = Prot / tau
-    Rossby_high = (Prot + eProt) / tau_low
-    Rossby_low = (Prot - eProt) / tau_high
-
-    # write to paper
-    path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
-    with open(f'{path_to_paper}data/rossby.txt', 'w') as f:
-        print(rf"{Rossby:.5f} + { Rossby_high:.5f} - {Rossby_low:.5f}")
-        f.write(f'{Rossby},{Rossby_high},{Rossby_low}')
-
-    # write to results
-    with open(f'../results/rossby.txt', 'w') as f:
-        f.write(f'{Rossby},{Rossby_high},{Rossby_low}')
+    df['Rossby'] = Prot / tau
+    df['Rossby_high'] = (Prot + eProt) / tau_low
+    df['Rossby_low'] = (Prot - eProt) / tau_high
 
 
     # bolometric correction
-    BC = 0.7384 - 0.7398 * BP_RP + 0.01340 * BP_RP**2 # Mann 2016 Table 3
-
+    # df['BC'] = 0.7384 - 0.7398 * df.BP_RP + 0.01340 * df.BP_RP**2 # Mann 2016 Table 3
+    # df["BC"] = 0.5817 - 0.4168*df.V_J -0.08165 * df.V_J**2 + 4.084e-3 * df.V_J**3 # Mann 2019 Table 3
+    # 0.8694 0.3667 −0.02920
+    df["BC"] = 0.8694 + 0.3667*df.V_J - 0.02920 * df.V_J**2 # Mann 2019 Table 3 
     # uncertainty
-    eBC1 = 0.045 * BC
-    eBC2 = np.sqrt((0.7398 * eBP_RP)**2 + (0.02680 * BP_RP * eBP_RP)**2) 
-    eBC = np.sqrt(eBC1**2 + eBC2**2)
+    # eBC1 = 0.045 * df.BC
+    # eBC2 = np.sqrt((0.7398 * df.eBP_RP)**2 + (0.02680 * df.BP_RP * df.eBP_RP)**2) 
+
+    # eBC1 = 0.016 * df.BC
+    # eBC2 = np.sqrt((0.4168 * df.eV_J)**2 + (0.1633 * df.V_J * df.eV_J)**2 + (0.01225 * df.V_J**2 * df.eV_J)**2)
+    eBC1 = 0.016 * df.BC
+    eBC2 = np.sqrt((0.3667 * df.eV_J)**2 + (0.05840 * df.V_J * df.eV_J)**2)
+    df['eBC'] = np.sqrt(eBC1**2 + eBC2**2)
 
     # absolute magnitude
-    Mbol = BC + G # bolometric correction
-    eMbol = np.sqrt(eBC**2 + eG**2)
-    Msun = 4.74 # solar bolometric luminosity
+    # df["Mbol"] = df.BC + df.G # bolometric correction
+    # df["Mbol"] = df.BC + df.V # bolometric correction
+    df["Mbol"] =  df.BC + df.MJ # bolometric correction
+    # df['eMbol'] = np.sqrt(df.eBC**2 + df.eG**2)
+    # df['eMbol'] = np.sqrt(df.eBC**2 + df.eV**2)
+    df['eMbol'] = np.sqrt(df.eBC**2 + df.eMJ**2)
+    Msun = 4.74 # solar bolometric luminosity   
 
     # luminosity
-    Lbol = L_sun * 10**(0.4 * (Msun - Mbol))
-    Lbol = Lbol.to(u.erg / u.s)
+    Lbol = L_sun.to(u.erg/u.s).value * 10**(0.4 * (Msun - df.Mbol))
+    print((0.4 * (Msun - df.Mbol)))
+    
+    df["Lbol_erg_s"] = Lbol
 
     # error propagation
-    eLbol = np.abs(L_sun * 0.4 * np.log(10) * (-10**(0.4 * (Msun - Mbol))) * eMbol)
-    eLbol = eLbol.to(u.erg / u.s)
+    eLbol = np.abs(L_sun.to(u.erg/u.s).value * 0.4 * np.log(10) * (-10**(0.4 * (Msun - df.Mbol))) * df.eMbol)
+    df["eLbol_erg_s"] = eLbol
 
-    # write to file
-    with open(f'../results/Lbol.txt', 'w') as f:
-        f.write(f'{Lbol.value},{eLbol.value}')
+    print(df[["TIC", "M","Lbol_erg_s","Mbol","BC","Ks"]])
 
+    # write to paper
+    path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/data/"
 
-    # read Xray data
-    df = pd.read_csv("../results/apec2.csv")
-    df = df.rename(columns={"Unnamed: 0": "label"})
+    # write to results
+    path = "../results/"
+
+    for p in [path_to_paper, path]:
+        df.to_csv(p + "ilin2021updated_w_Rossby_Lbol.csv")
+
+    # -------------------------------------------------------------------------
+    # treat TIC 277
+
+    # read Xray data for TIC 277
+    apec = pd.read_csv("../results/apec2.csv")
+    apec = apec.rename(columns={"Unnamed: 0": "label"})
+
+    tic277_Lbol = df.loc[df.TIC == 277539431].iloc[0].Lbol_erg_s
+    tic277_eLbol = df.loc[df.TIC == 277539431].iloc[0].eLbol_erg_s
+    tic277_Rossby = df.loc[df.TIC == 277539431].iloc[0].Rossby
+    tic277_Rossby_high = df.loc[df.TIC == 277539431].iloc[0].Rossby_high
+    tic277_Rossby_low = df.loc[df.TIC == 277539431].iloc[0].Rossby_low
 
     # calculate Lx/Lbol
-    df["Lx_Lbol"] = df.Lx_erg_s / Lbol.value
-    df["e_Lx_Lbol"] = df.Lx_erg_s / Lbol.value * np.sqrt((df.Lx_erg_s_err / df.Lx_erg_s)**2 + (eLbol / Lbol)**2)
+    apec["Lx_Lbol"] = apec.Lx_erg_s / tic277_Lbol
+    apec["e_Lx_Lbol"] = (apec.Lx_erg_s / tic277_Lbol * 
+                         np.sqrt((apec.Lx_erg_s_err / apec.Lx_erg_s)**2 + 
+                                 (tic277_eLbol / tic277_Lbol)**2))
 
     # add Rossby number to table
-    df["Rossby"] = Rossby
-    df["Rossby_high"] = Rossby_high
-    df["Rossby_low"] = Rossby_low
+    apec["Rossby"] = tic277_Rossby
+    apec["Rossby_high"] = tic277_Rossby_high
+    apec["Rossby_low"] = tic277_Rossby_low
 
     # write the supplemented table to paper repo
     path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
-    df.to_csv(path_to_paper + "data/apec2_results.csv", index=False)
+    apec.to_csv(path_to_paper + "data/apec2_results.csv", index=False)
 
