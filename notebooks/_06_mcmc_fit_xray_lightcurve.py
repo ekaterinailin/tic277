@@ -22,7 +22,7 @@ import corner
 
 import matplotlib.pyplot as plt
 
-def flare_only(x, d, e, f, a):
+def flare_only(x, d, e, f, a): #peak, dur, ampl
     """Flare only."""
     return aflare(x, d, e, f) + a
 
@@ -31,10 +31,10 @@ def log_prior_aflare(theta):
     """Log prior function."""
     d, e, f, a = theta
     # print(theta)
-    if ((0.2 < d < .4) & 
-        (0 < e < 2) & 
-        (0 < f < 1e-4) &
-        (0 < a < 1e-4) ):
+    if ((0.1 < d < .5) & #peak
+        (0 < e < 1) & #dur
+        (0 < f < 10) & #ampl
+        (0 < a < 0.1) ): #offset
         return 0.0
     return -np.inf
 
@@ -59,18 +59,18 @@ def log_likelihood_aflare(theta, x, y, yerr):
 if __name__ == "__main__":
 
     # read in the lightcurve
-    dd = pd.read_csv("../results/stacked_xray_lightcurve.csv")
+    dd = pd.read_csv("../data/corrected_merged_epic_lc.csv")
 
     model_func = flare_only
 
     # define shortcuts to the relevant columns    
-    x = dd.time.values / 60 / 60 / 24 - 8982.
-    y = dd.events_minus_bkg.values
-    yerr = dd["std"].values
+    x = dd["TIME"].values / 60 / 60 / 24 - 8982.
+    y = dd["RATE"].values
+    yerr = dd["ERROR"].values
 
     # find starting point for MCMC with scipy.optimize
     nll = lambda *args: -log_likelihood_aflare(*args)
-    initial = np.array([0.38, 0.2, 4e-5, 5e-6]) + 1e-6 * np.random.randn(4) #1e-5, 0.5, 1e-5,
+    initial = np.array([0.38, 0.2, 2, 0.01]) + 1e-3 * np.random.randn(4) #1e-5, 0.5, 1e-5,
     soln = minimize(nll, initial, args=(x, y, yerr))
     d, e, f, a = soln.x #a, b, c, 
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
     # layout
     plt.xlim(x[0], x[-1])
-    plt.ylim(-1e-5, 7e-5)
+    plt.ylim(-0.01, 0.3)
     plt.xlabel("time [d]")
     plt.ylabel("X-ray flux - background [counts/s]")
     plt.tight_layout()

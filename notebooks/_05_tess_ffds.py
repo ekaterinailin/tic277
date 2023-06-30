@@ -20,22 +20,76 @@ Writes out
 import pandas as pd
 import numpy as np
 
+from astropy.modeling import models
+from astropy import units as u
+from astropy.constants import sigma_sb
+
 from altaipony.lcio import from_mast
 from altaipony.customdetrend import custom_detrending
 from altaipony.ffd import FFD
 
+def flare_factor(teff, radius, wav, resp,  tflare=10000):
+    """Calculate the flare energy factor in ergs.
+
+    Parameters
+    ----------
+    teff : float
+        Stellar effective temperature in Kelvin.
+    radius : float
+        Stellar radius in solar radii.
+    wav : array
+        Array of wavelengths in nanometers.
+    resp : array
+        Array of bandpass responses.
+     tflare : float
+        Flare temperature in Kelvin.
+    
+    Returns
+    -------
+    factor : float
+        Flare energy factor in ergs/s.
+    """
+
+    # blackbody
+    bb = models.BlackBody(temperature=teff * u.K)
+
+    # blackbody flux in TESS band
+    bbwavs = bb(wav * u.nm)  * resp
+
+    fluxs = np.trapz(bbwavs.value, wav)
+
+    # blackbody
+    bb = models.BlackBody(temperature=tflare * u.K)
+
+    # blackbody flux in TESS band
+    bbwavf = bb(wav * u.nm)  * resp
+
+    fluxf = np.trapz(bbwavf.value, wav)
+
+    ratio = fluxs / fluxf
+
+    factor = ratio * np.pi * (radius * u.R_sun) ** 2 * sigma_sb * (tflare * u.K)**4
+
+    return factor.to("erg/s")
+
+
 if __name__ == "__main__":
+
+    # TESS band response
+    tessresp = pd.read_csv("../data/TESS_response.csv")
+
 
     # ----------------------------------------------------------------------------
     # GRAB LIGHT CURVES
 
+
     # sectors and TICs
-    stic = [([12, 37, 39], 277539431),
-            ([1, 2, 28, 29], 237880881),
-            ([7, 34, 61], 452922110),
-            ([8, 9, 10, 35, 36, 37, 62, 63, 64], 44984200),]
+    stic = [([12, 37, 39], 277539431, 2680, 0.145),
+            ([1, 2, 28, 29], 237880881, 3060, 0.275),
+            ([7, 34, 61], 452922110, 2680, 0.137),
+            ([8, 9, 10, 35, 36, 37, 62, 63, 64], 44984200, 2810, 0.145),]
     
-    for sectors, tic in stic[:2]:
+    for sectors, tic, teff, radius in stic:
 
         # download light curves
         lcs = [from_mast(f"TIC {tic}", mission="TESS", sector=s, cadence="short") for s in sectors]
@@ -65,8 +119,13 @@ if __name__ == "__main__":
 
         # reset index
         nflares = flares.reset_index(inplace=False)
+
+        factor = flare_factor(teff, radius, tessresp["WAVELENGTH"].values, tessresp["PASSBAND"].values)
         
-        print(flares.shape)
+        nflares["ed_rec"] = nflares.ed_rec * factor.value
+        nflares["ed_rec_err"] = nflares.ed_rec_err * factor.value
+
+        print(nflares[["ed_rec","ed_rec_err"]])
 
         # add manually the large flare by adding the contributions from the 4 detections
         if tic == 277539431:
@@ -120,13 +179,13 @@ if __name__ == "__main__":
         nflares["tot_obs_time"] = tot_obs_time
 
         # produce the FFD
-        ffd = FFD(nflares.astype(float), tot_obs_time=tot_obs_time)
-        ed, freq, counts = ffd.ed_and_freq()
+        # ffd = FFD(nflares.astype(float), tot_obs_time=tot_obs_time)
+        # ed, freq, counts = ffd.ed_and_freq()
 
-        # fit the power law with MCMC
-        ffd.fit_powerlaw("mcmc")
+        # # fit the power law with MCMC
+        # ffd.fit_powerlaw("mcmc")
 
-        print("Calculated FFD and fit power law.")
+        # print("Calculated FFD and fit power law.")
 
         # ----------------------------------------------------------------------------
         # SAVE RESULTS
@@ -135,16 +194,17 @@ if __name__ == "__main__":
         path_to_paper = ("/home/ekaterina/Documents/002_writing/"
                         "2023_XMM_for_TIC277/xmm_for_tic277/src/data/")
 
-        # Write FFD fits results to table
-        header = "tic,alpha,alpha_low_err,alpha_up_err,beta,beta_low_err,beta_up_err\n"
-        data = (f"{tic},{ffd.alpha},{ffd.alpha_low_err},{ffd.alpha_up_err},"
-                f"{ffd.beta},{ffd.beta_low_err},{ffd.beta_up_err}")
+        # # Write FFD fits results to table
+        # header = "tic,alpha,alpha_low_err,alpha_up_err,beta,beta_low_err,beta_up_err\n"
+        # data = (f"{tic},{ffd.alpha},{ffd.alpha_low_err},{ffd.alpha_up_err},"
+        #         f"{ffd.beta},{ffd.beta_low_err},{ffd.beta_up_err}"
+        #         "\n")
 
 
-        for path in [path_to_paper, "../results/"]:
-            with(open(f"{path}tess_ffd.csv", "a")) as f:
-                    f.write(header)
-                    f.write(data)
+        # for path in [path_to_paper, "../results/"]:
+        #     with(open(f"{path}tess_ffd.csv", "a")) as f:
+        #             # f.write(header)
+        #             f.write(data)
 
 
                 

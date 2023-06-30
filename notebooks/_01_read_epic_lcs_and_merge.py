@@ -11,11 +11,12 @@ This script reads in the epiclccorr-corrected light curves from the MOS and PN
 detectors, and combines them into one light curve. The light curve is then saved 
 to a file. MOS1 and MOS2 are simply co-added as they share the same time bins.
 Then we calculate the overlap between PN and MOS, define time bins that are covered
-by both, and add the counts in each time bin. The errors are quadratically added.
+by both, and add the counts in each time bin. The ERRORs are quadratically added.
 """
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 from astropy.table import Table
 
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     time_bins = np.linspace(tstart, tstop, N)
 
     # add the RATE in each TIME bin
-    rate, error = [], []
+    RATE, ERROR = [], []
     for i in range(len(time_bins)-1):
         masktabmos = (tabmos["TIME"] >= time_bins[i]) & (tabmos["TIME"] < time_bins[i+1])
         tabmoscounts = tabmos[masktabmos]["RATE"].sum()
@@ -56,19 +57,19 @@ if __name__ == "__main__":
         maskpn = (tab1["TIME"] >= time_bins[i]) & (tab1["TIME"] < time_bins[i+1])
         tab1counts = tab1[maskpn]["RATE"].sum()
 
-        # quadratically add errors
+        # quadratically add ERRORs
         err = np.sqrt(np.sum(tab1[maskpn]["ERROR"]**2) +
                     np.sum(tabmos[masktabmos]["ERROR"]**2))
 
-        rate.append(tab1counts+tabmoscounts)
-        error.append(err)
+        RATE.append(tab1counts+tabmoscounts)
+        ERROR.append(err)
 
-    rate = np.array(rate)
-    error = np.array(error)
+    RATE = np.array(RATE)
+    ERROR = np.array(ERROR)
 
     newlc = pd.DataFrame({"TIME" : time_bins[:-1],
-                        "RATE" : rate,
-                        "ERROR" : error})
+                        "RATE" : RATE,
+                        "ERROR" : ERROR})
 
     # save to file
     newlc.to_csv("../data/corrected_merged_epic_lc.csv", index=False)
@@ -76,3 +77,11 @@ if __name__ == "__main__":
     path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/data/"
 
     newlc.to_csv(f"{path_to_paper}corrected_merged_epic_lc.csv", index=False)
+
+    plt.figure(figsize=(10, 5))
+    plt.errorbar(newlc['TIME'] / 3600 / 24 , newlc['RATE'] + 0.05, yerr=newlc["ERROR"],alpha=0.5)
+    plt.errorbar(tabmos['TIME'] / 3600 / 24 , tabmos['RATE'] - 0.05, yerr=tabmos["ERROR"],alpha=0.5)
+    plt.errorbar(tab1['TIME'] / 3600 / 24 , tab1['RATE'] , yerr=tab1["ERROR"],alpha=0.5)
+    plt.show()
+
+

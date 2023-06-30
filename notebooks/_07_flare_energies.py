@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # X-RAY FLARE --------------------------------------------------------------
 
     # read in the X-ray light curve
-    dd = pd.read_csv("../results/stacked_xray_lightcurve.csv")
+    dd = pd.read_csv("../data/corrected_merged_epic_lc.csv")
 
     # read in apec2 file from results to get Lx
     apec2 = pd.read_csv("../results/apec2.csv").rename(columns={"Unnamed: 0":"data"})
@@ -52,11 +52,11 @@ if __name__ == "__main__":
     start, stop = 30,75
 
     # calculate residual and std
-    residual = dd.events_minus_bkg.values[start:stop] / baseline -1.
-    std = dd["std"].values[start:stop] / baseline
+    residual = dd["RATE"].values[start:stop] / baseline -1.
+    std = dd["ERROR"].values[start:stop] / baseline
 
     # get time array
-    x = dd.time.values[start:stop] 
+    x = dd["TIME"].values[start:stop] 
 
     # calculate ED and error
     ed = np.sum(np.diff(x) * residual[:-1])
@@ -68,15 +68,19 @@ if __name__ == "__main__":
     E_x_erg_err = ederr * lx_without_flares
 
     # start time
-    tstart = dd.time.values[start]
-    tstop = dd.time.values[stop]
+    tstart = dd["TIME"].values[start]
+    tstop = dd["TIME"].values[stop]
+
+    # calculate flare rate for one flare
+    rate = 1 / (dd["TIME"].values[-1] - dd["TIME"].values[0]) * 3600 * 24
 
     results["EPIC"] = {"tstart" : tstart,
                     "tstop" : tstop,
                     "E_erg" : E_x_erg,
                     "eE_erg" : E_x_erg_err,
                     "ED" : ed,
-                    "eED": ederr}
+                    "eED": ederr,
+                    "rate_per_day" : rate}
 
 
     # OM -----------------------------------------------------------------------
@@ -141,19 +145,26 @@ if __name__ == "__main__":
     Ef = Lf * ed
     eEf = np.sqrt((2 * Lf / R * eR * ed)**2 + (Lf * ederr)**2)
 
+    # calculate flare rate
+    rate = 1 / (l.time.values[-1] - l.time.values[0]) * 3600 * 24
+
     results["OM"] = {"tstart" : t0,
                     "tstop" : t1,
                     "E_erg" : Ef,
                     "eE_erg" : eEf,
                     "ED" : ed,
-                    "eED": ederr}
+                    "eED": ederr,
+                    "rate_per_day" : rate }
 
     # make results table pandas
     results = pd.DataFrame(results).T
+    results = results.reset_index().rename(columns={"index" : "instrument"})
+    
+    print(results)
 
     # write results to file
-    results.to_csv("../results/flare_energies.csv")
+    results.to_csv("../results/flare_energies.csv", index=False)
 
     # write to paper file
     path = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/data/"
-    results.to_csv(f"{path}flare_energies.csv")
+    results.to_csv(f"{path}flare_energies.csv", index=False)

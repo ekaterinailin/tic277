@@ -18,6 +18,56 @@ from astropy.constants import L_sun
 import astropy.units as u
 
 
+def rossby_reiners2014(Lbol, Prot, error=False, Lbol_high=None, 
+                       Lbol_low=None, Prot_high=None, Prot_low=None):
+    """Calculate the Rossby number for a given bolometric luminosity.
+    Based on Reiners et al. (2014), as noted in Reiners et al. (2022).
+    
+    Parameters
+    ----------
+    Lbol : float
+        Bolometric luminosity in solar units.
+    Prot : float
+        Rotation period in days.
+    error : bool
+        If True, return the error in the Rossby number from
+        error propagation.
+    Lbol_high : float
+        Upper 1-sigma error in bolometric luminosity in solar units.
+    Lbol_low : float
+        Lower 1-sigma error in bolometric luminosity in solar units.
+    Prot_high : float
+        Upper 1-sigma error in rotation period in days.
+    Prot_low : float    
+        Lower 1-sigma error in rotation period in days.
+
+
+    Returns
+    -------
+    Ro : float
+        Rossby number.
+    """
+    # convective turnover time
+    tau = 12.3 / (Lbol**0.5)
+
+    if error:
+        tau_high = 12.3 / (Lbol_low**0.5)
+        tau_low = 12.3 / (Lbol_high**0.5)
+
+    # Rossby number
+    Ro = Prot / tau
+
+    if error:
+        Ro_high = Prot_high / tau_low
+        Ro_low = Prot_low / tau_high
+
+    if error:
+        return Ro, Ro_high, Ro_low, tau, tau_high, tau_low
+    else:
+        return Ro, tau  
+
+
+
 def tau_wright2018_mass(M, err=False, eM=None):
     """Convective turnover time from Wright et al. 2018 using
     Eq. 6 from that paper.
@@ -136,46 +186,53 @@ if __name__ == "__main__":
     # rotation period
     Prot = df['Prot_min'] / 60 /24 
     eProt = df['eProt_min'] / 60 / 24
+    df["Prot_days"] = Prot
+    df["eProt_days"] = eProt
 
     # Rossby number
-    df['Rossby'] = Prot / tau
-    df['Rossby_high'] = (Prot + eProt) / tau_low
-    df['Rossby_low'] = (Prot - eProt) / tau_high
-
+    df['Rossby_wright18'] = Prot / tau
+    df['Rossby_high_wright18'] = (Prot + eProt) / tau_low
+    df['Rossby_low_wright18'] = (Prot - eProt) / tau_high
 
     # bolometric correction
-    # df['BC'] = 0.7384 - 0.7398 * df.BP_RP + 0.01340 * df.BP_RP**2 # Mann 2016 Table 3
-    # df["BC"] = 0.5817 - 0.4168*df.V_J -0.08165 * df.V_J**2 + 4.084e-3 * df.V_J**3 # Mann 2019 Table 3
-    # 0.8694 0.3667 −0.02920
     df["BC"] = 0.8694 + 0.3667*df.V_J - 0.02920 * df.V_J**2 # Mann 2019 Table 3 
-    # uncertainty
-    # eBC1 = 0.045 * df.BC
-    # eBC2 = np.sqrt((0.7398 * df.eBP_RP)**2 + (0.02680 * df.BP_RP * df.eBP_RP)**2) 
 
-    # eBC1 = 0.016 * df.BC
-    # eBC2 = np.sqrt((0.4168 * df.eV_J)**2 + (0.1633 * df.V_J * df.eV_J)**2 + (0.01225 * df.V_J**2 * df.eV_J)**2)
+    # uncertainty
     eBC1 = 0.016 * df.BC
     eBC2 = np.sqrt((0.3667 * df.eV_J)**2 + (0.05840 * df.V_J * df.eV_J)**2)
     df['eBC'] = np.sqrt(eBC1**2 + eBC2**2)
 
     # absolute magnitude
-    # df["Mbol"] = df.BC + df.G # bolometric correction
-    # df["Mbol"] = df.BC + df.V # bolometric correction
     df["Mbol"] =  df.BC + df.MJ # bolometric correction
-    # df['eMbol'] = np.sqrt(df.eBC**2 + df.eG**2)
-    # df['eMbol'] = np.sqrt(df.eBC**2 + df.eV**2)
     df['eMbol'] = np.sqrt(df.eBC**2 + df.eMJ**2)
     Msun = 4.74 # solar bolometric luminosity   
 
     # luminosity
-    Lbol = L_sun.to(u.erg/u.s).value * 10**(0.4 * (Msun - df.Mbol))
-    print((0.4 * (Msun - df.Mbol)))
+    Lbol_sun = 10**(0.4 * (Msun - df.Mbol))
+    Lbol = L_sun.to(u.erg/u.s).value * Lbol_sun
     
     df["Lbol_erg_s"] = Lbol
+    df["Lbol_Lsun"] = Lbol / L_sun.to(u.erg/u.s).value
 
     # error propagation
     eLbol = np.abs(L_sun.to(u.erg/u.s).value * 0.4 * np.log(10) * (-10**(0.4 * (Msun - df.Mbol))) * df.eMbol)
+    eLbol_sun = eLbol / L_sun.to(u.erg/u.s).value
     df["eLbol_erg_s"] = eLbol
+    df["eLbol_Lsun"] = eLbol_sun
+
+    # Rossby number from reiners 2014   
+    res = rossby_reiners2014(Lbol_sun, Prot, error=True, Lbol_high=Lbol_sun + eLbol_sun, 
+                       Lbol_low=Lbol_sun-eLbol_sun, Prot_high=Prot+eProt, Prot_low=Prot-eProt)
+    
+    Ro, Ro_high, Ro_low, tau, tau_high, tau_low = res
+
+    df["Rossby_reiners14"] = Ro
+    df["Rossby_high_reiners14"] = Ro_high
+    df["Rossby_low_reiners14"] = Ro_low
+    df["tau_reiners14"] = tau
+    df["tau_high_reiners14"] = tau_high
+    df["tau_low_reiners14"] = tau_low
+
 
     print(df[["TIC", "M","Lbol_erg_s","Mbol","BC","Ks"]])
 
@@ -192,27 +249,42 @@ if __name__ == "__main__":
     # treat TIC 277
 
     # read Xray data for TIC 277
-    apec = pd.read_csv("../results/apec2.csv")
-    apec = apec.rename(columns={"Unnamed: 0": "label"})
+    models = ["vapec_vapec", "apec_apec"]
 
-    tic277_Lbol = df.loc[df.TIC == 277539431].iloc[0].Lbol_erg_s
-    tic277_eLbol = df.loc[df.TIC == 277539431].iloc[0].eLbol_erg_s
-    tic277_Rossby = df.loc[df.TIC == 277539431].iloc[0].Rossby
-    tic277_Rossby_high = df.loc[df.TIC == 277539431].iloc[0].Rossby_high
-    tic277_Rossby_low = df.loc[df.TIC == 277539431].iloc[0].Rossby_low
+    for model in models:
 
-    # calculate Lx/Lbol
-    apec["Lx_Lbol"] = apec.Lx_erg_s / tic277_Lbol
-    apec["e_Lx_Lbol"] = (apec.Lx_erg_s / tic277_Lbol * 
-                         np.sqrt((apec.Lx_erg_s_err / apec.Lx_erg_s)**2 + 
-                                 (tic277_eLbol / tic277_Lbol)**2))
+        apec = pd.read_csv(f"../results/{model}.csv")
+        apec = apec.rename(columns={"Unnamed: 0": "label"})
 
-    # add Rossby number to table
-    apec["Rossby"] = tic277_Rossby
-    apec["Rossby_high"] = tic277_Rossby_high
-    apec["Rossby_low"] = tic277_Rossby_low
+        tic277_Lbol = df.loc[df.TIC == 277539431].iloc[0].Lbol_erg_s
+        tic277_eLbol = df.loc[df.TIC == 277539431].iloc[0].eLbol_erg_s
+        tic277_Rossby = df.loc[df.TIC == 277539431].iloc[0].Rossby_wright18
+        tic277_Rossby_high = df.loc[df.TIC == 277539431].iloc[0].Rossby_high_wright18
+        tic277_Rossby_low = df.loc[df.TIC == 277539431].iloc[0].Rossby_low_wright18
+        # add reiner's Rossby number
+        tic277_Rossby_reiners14 = df.loc[df.TIC == 277539431].iloc[0].Rossby_reiners14
+        tic277_Rossby_high_reiners14 = df.loc[df.TIC == 277539431].iloc[0].Rossby_high_reiners14
+        tic277_Rossby_low_reiners14 = df.loc[df.TIC == 277539431].iloc[0].Rossby_low_reiners14
+        
 
-    # write the supplemented table to paper repo
-    path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
-    apec.to_csv(path_to_paper + "data/apec2_results.csv", index=False)
+        # calculate Lx/Lbol
+        apec["Lx_Lbol"] = apec.Lx_erg_s / tic277_Lbol
+        apec["e_Lx_Lbol"] = (apec.Lx_erg_s / tic277_Lbol * 
+                            np.sqrt((apec.Lx_erg_s_err / apec.Lx_erg_s)**2 + 
+                                    (tic277_eLbol / tic277_Lbol)**2))
+
+        # add Rossby number to table
+        apec["Rossby_wright18"] = tic277_Rossby
+        apec["Rossby_high_wright18"] = tic277_Rossby_high
+        apec["Rossby_low_wright18"] = tic277_Rossby_low
+
+        # add reiner's Rossby number
+        apec["Rossby_reiners14"] = tic277_Rossby_reiners14
+        apec["Rossby_high_reiners14"] = tic277_Rossby_high_reiners14
+        apec["Rossby_low_reiners14"] = tic277_Rossby_low_reiners14
+
+        print(apec[["Rossby_wright18", "Rossby_reiners14", "Lx_Lbol", "e_Lx_Lbol"]])
+        # write the supplemented table to paper repo
+        path_to_paper = "/home/ekaterina/Documents/002_writing/2023_XMM_for_TIC277/xmm_for_tic277/src/"
+        apec.to_csv(path_to_paper + f"data/{model}_results.csv", index=False)
 
