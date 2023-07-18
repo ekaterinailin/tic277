@@ -68,6 +68,8 @@ def flare_factor(teff, radius, wav, resp,  tflare=10000):
 
     ratio = fluxs / fluxf
 
+    print("TESS", ratio)
+
     factor = ratio * np.pi * (radius * u.R_sun) ** 2 * sigma_sb * (tflare * u.K)**4
 
     return factor.to("erg/s")
@@ -84,12 +86,12 @@ if __name__ == "__main__":
 
 
     # sectors and TICs
-    stic = [([12, 37, 39, 64], 277539431, 2680, 0.145),
+    stic = [([12, 37, 39, 64, 65], 277539431, 2680, 0.145),
             ([1, 2, 28, 29], 237880881, 3060, 0.275),
             ([7, 34, 61], 452922110, 2680, 0.137),
             ([8, 9, 10, 35, 36, 37, 62, 63, 64], 44984200, 2810, 0.145),]
     
-    for sectors, tic, teff, radius in stic:
+    for sectors, tic, teff, radius in stic[:1]:
 
         # download light curves
         lcs = [from_mast(f"TIC {tic}", mission="TESS", sector=s, cadence="short") for s in sectors]
@@ -179,13 +181,13 @@ if __name__ == "__main__":
         nflares["tot_obs_time"] = tot_obs_time
 
         # produce the FFD
-        # ffd = FFD(nflares.astype(float), tot_obs_time=tot_obs_time)
-        # ed, freq, counts = ffd.ed_and_freq()
+        ffd = FFD(nflares.astype(float), tot_obs_time=tot_obs_time)
+        ed, freq, counts = ffd.ed_and_freq()
 
-        # # fit the power law with MCMC
-        # ffd.fit_powerlaw("mcmc")
+        # fit the power law with MCMC
+        ffd.fit_powerlaw("mcmc")
 
-        # print("Calculated FFD and fit power law.")
+        print("Calculated FFD and fit power law.")
 
         # ----------------------------------------------------------------------------
         # SAVE RESULTS
@@ -194,17 +196,17 @@ if __name__ == "__main__":
         path_to_paper = ("/home/ekaterina/Documents/002_writing/"
                         "2023_XMM_for_TIC277/xmm_for_tic277/src/data/")
 
-        # # Write FFD fits results to table
-        # header = "tic,alpha,alpha_low_err,alpha_up_err,beta,beta_low_err,beta_up_err\n"
-        # data = (f"{tic},{ffd.alpha},{ffd.alpha_low_err},{ffd.alpha_up_err},"
-        #         f"{ffd.beta},{ffd.beta_low_err},{ffd.beta_up_err}"
-        #         "\n")
+        # Write FFD fits results to table
+        header = "tic,alpha,alpha_low_err,alpha_up_err,beta,beta_low_err,beta_up_err\n"
+        data = (f"{tic},{ffd.alpha},{ffd.alpha_low_err},{ffd.alpha_up_err},"
+                f"{ffd.beta},{ffd.beta_low_err},{ffd.beta_up_err}"
+                "\n")
 
 
-        # for path in [path_to_paper, "../results/"]:
-        #     with(open(f"{path}tess_ffd.csv", "a")) as f:
-        #             # f.write(header)
-        #             f.write(data)
+        for path in [path_to_paper, "../results/"]:
+            with(open(f"{path}tess_ffd.csv", "a")) as f:
+                    # f.write(header)
+                    f.write(data)
 
 
                 

@@ -136,7 +136,8 @@ if __name__ == "__main__":
     flare_xmm = np.trapz(bbflare(wav_xmm),x=wav_xmm)
 
     # ratio of integrals
-    ratio = star_xmm / flare_xmm
+    ratio = star_xmm / flare_xmm 
+    print("OM", ratio)
 
     # flare luminosity
     Lf = (sigma_sb * 2 * np.pi * (R * R_sun)**2 * (10000 * u.K)**4 * ratio).to(u.erg / u.s).value
