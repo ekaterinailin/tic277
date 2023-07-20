@@ -115,7 +115,7 @@ if __name__ == "__main__":
         # find flares
         flares = pd.DataFrame()
         for lcd in lcds:
-            _ = lcd.find_flares()
+            _ = lcd.find_flares(addtail=True)
             _.flares["Sector"] = lcd.sector # add sector to flare table
             flares = pd.concat([flares, _.flares])
 
