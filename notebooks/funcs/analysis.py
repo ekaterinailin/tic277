@@ -16,51 +16,6 @@ import numpy as np
 
 
 
-def convert_to_MK(df, model="apec+apec"):
-    """Convert the kT values from keV to MK.
-
-    Parameters
-    ----------
-    df : pandas DataFrame
-        DataFrame with the kT values
-    model : str, optional
-        Model used for the fit. Default is "apec+apec".
-
-    Returns
-    -------
-    dfr : pandas DataFrame
-        DataFrame with the kT values converted to MK
-    """
-    # convert to MK
-    keV_to_MK = 11.6045250061598
-
-    if model == "apec+apec":
-        secondT = "kT5"
-    elif "vapec+vapec" in model:
-        print("vapec+vapec")
-        secondT = "kT17"
-
-    # columns to convert
-    convcols = ["kT1", "EkT1_high", "EkT1_low",
-                secondT, f"E{secondT}_high", f"E{secondT}_low"] 
-    
-    if model == "vapec+vapec+vapec":
-        convcols += ["kT33", "EkT33_high", "EkT33_low"]
-
-    # new column names
-    newconvcols = ["T_MK_1", "T_MK_1_high", "T_MK_1_low",
-                "T_MK_5", "T_MK_5_high", "T_MK_5_low"]
-    
-    if model == "vapec+vapec+vapec":
-        newconvcols += ["T_MK_33", "T_MK_33_high", "T_MK_33_low"]
-
-    # convert
-    for old, new in zip(convcols,newconvcols):
-        df[new] = df[old] * keV_to_MK
-
-    return df
-
-
 def calculate_lx(d, fx, err=False, derr=None, fxerr=None):
     """Calculate luminosity from distance and flux.
     
