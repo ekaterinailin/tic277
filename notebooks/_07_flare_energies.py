@@ -111,8 +111,18 @@ if __name__ == "__main__":
     ederr = np.sqrt(ed**2 / (stop-1-start) / flare_chisq)
 
     # white light OM effective band width
-    midwav = 406
-    width = 347
+    # midwav = 406
+    # width = 347
+
+    # this curve: https://xmm-tools.cosmos.esa.int/external/xmm_user_support/documentation/uhb/omfilters.html
+    omresp = pd.read_csv("../data/xmm/om/om_white.dat", sep="\s+")
+
+    # normalize response to 1 at max
+    respmax = omresp.white_m2.max()
+    omresponse = omresp.white_m2 / respmax
+
+    # nm to AA
+    lambda_aa = omresp.lambda_nm * 10
 
     # effective temperature of TIC 277
     Teff = 2680
@@ -129,11 +139,11 @@ if __name__ == "__main__":
     bbflare = models.BlackBody(temperature=10000 * u.K, scale=scale) 
 
     # effective transmission of white light OM filter estimate
-    wav_xmm = np.arange(midwav*10 - width/2*10, midwav*10 + width/2*10) * u.AA 
+    resp = lambda_aa * omresponse * u.AA
 
     # integral numerator and denominator
-    star_xmm = np.trapz(bb(wav_xmm), x=wav_xmm )
-    flare_xmm = np.trapz(bbflare(wav_xmm),x=wav_xmm)
+    star_xmm = np.trapz(bb(lambda_aa) * resp, x=lambda_aa )
+    flare_xmm = np.trapz(bbflare(lambda_aa) * resp,x=lambda_aa)
 
     # ratio of integrals
     ratio = star_xmm / flare_xmm 
