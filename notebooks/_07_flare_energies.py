@@ -42,30 +42,22 @@ if __name__ == "__main__":
     lx_without_flares = apec2[apec2.data == "PN (no flare)"].Lx_erg_s.iloc[0]
     elx_without_flares = apec2[apec2.data == "PN (no flare)"].Lx_erg_s_err.iloc[0]
 
-    # get baseline flux from mcmc fit
-    mcmcfit = pd.read_csv("../results/mcmc_flareonly_results.csv")
+    lx_flare_only = apec2[apec2.data == "PN (only flare)"].Lx_erg_s.iloc[0]
+    elx_flare_only = apec2[apec2.data == "PN (only flare)"].Lx_erg_s_err.iloc[0]
 
-    # the seconc row is the 50th percentile
-    baseline = mcmcfit.iloc[1].baseline
+    # calculate the difference of the two Lx, and propagate the error
+    delta_lx = lx_flare_only - lx_without_flares
+    edelta_lx = np.sqrt(elx_flare_only**2 + elx_without_flares**2)
+
+    # calculate flare energy using the flaring time
+    dt = 776080000 - 776075500 # seconds between start and stop of flare in X-ray
+    E_x_erg = delta_lx * dt
+    E_x_erg_err = edelta_lx * dt
+
+    print(E_x_erg, E_x_erg_err)
 
     # select flare start and stop indices
     start, stop = 30,75
-
-    # calculate residual and std
-    residual = dd["RATE"].values[start:stop] / baseline -1.
-    std = dd["ERROR"].values[start:stop] / baseline
-
-    # get time array
-    x = dd["TIME"].values[start:stop] 
-
-    # calculate ED and error
-    ed = np.sum(np.diff(x) * residual[:-1])
-    flare_chisq = chi_square(residual[:-1], std[:-1])
-    ederr = np.sqrt(ed**2 / (stop-1-start) / flare_chisq)
-
-    # calculate energy in flux band
-    E_x_erg = ed * lx_without_flares
-    E_x_erg_err = ederr * lx_without_flares
 
     # start time
     tstart = dd["TIME"].values[start]
@@ -78,8 +70,8 @@ if __name__ == "__main__":
                     "tstop" : tstop,
                     "E_erg" : E_x_erg,
                     "eE_erg" : E_x_erg_err,
-                    "ED" : ed,
-                    "eED": ederr,
+                    "ED" : np.nan,
+                    "eED": np.nan,
                     "rate_per_day" : rate}
 
 
