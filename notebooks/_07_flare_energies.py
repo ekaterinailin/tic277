@@ -49,19 +49,16 @@ if __name__ == "__main__":
     delta_lx = lx_flare_only - lx_without_flares
     edelta_lx = np.sqrt(elx_flare_only**2 + elx_without_flares**2)
 
+    # start time and stop time of the flare
+    tstart = 776075500
+    tstop = 776080000
+
     # calculate flare energy using the flaring time
-    dt = 776080000 - 776075500 # seconds between start and stop of flare in X-ray
+    dt = tstop - tstart # seconds between start and stop of flare in X-ray
     E_x_erg = delta_lx * dt
     E_x_erg_err = edelta_lx * dt
 
     print(E_x_erg, E_x_erg_err)
-
-    # select flare start and stop indices
-    start, stop = 30,75
-
-    # start time
-    tstart = dd["TIME"].values[start]
-    tstop = dd["TIME"].values[stop]
 
     # calculate flare rate for one flare
     rate = 1 / (dd["TIME"].values[-1] - dd["TIME"].values[0]) * 3600 * 24

@@ -25,7 +25,7 @@ from astropy import units as u
 from astropy.constants import sigma_sb
 
 from altaipony.lcio import from_mast
-from altaipony.customdetrend import custom_detrending
+from altaipony.customdetrend import custom_detrending, estimate_detrended_noise
 from altaipony.ffd import FFD
 
 def flare_factor(teff, radius, wav, resp,  tflare=10000):
@@ -106,9 +106,13 @@ if __name__ == "__main__":
         lcds = []
         for lc in lcs:
             if type(lc) is list:
-                lcds.append(lc[0].detrend("custom", func=custom_detrending, **{"savgol1":3.,"savgol2":1.5}))
+                lcd = lc[0].detrend("custom", func=custom_detrending, **{"savgol1":3.,"savgol2":1.5})
+                lcd = estimate_detrended_noise(lcd, std_window=60)
+                lcds.append(lcd)
             else:
-                lcds.append(lc.detrend("custom", func=custom_detrending, **{"savgol1":3.,"savgol2":1.5}))
+                lcd = lc.detrend("custom", func=custom_detrending, **{"savgol1":3.,"savgol2":1.5})
+                lcd = estimate_detrended_noise(lcd, std_window=60)
+                lcds.append(lcd)
 
         print("Detrended light curves.")
 
